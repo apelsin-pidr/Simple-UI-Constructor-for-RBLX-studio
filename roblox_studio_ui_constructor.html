@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roblox Studio UI Constructor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Fredoka:wght@400;600&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        roblox: {
+                            dark: '#1e1e1e',
+                            darker: '#141414',
+                            panel: '#242424',
+                            border: '#333333',
+                            accent: '#00a2ff',
+                            accentHover: '#0082cc',
+                            selected: '#005fb8',
+                            text: '#f0f0f0',
+                            muted: '#999999'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        marker: ['Permanent Marker', 'cursive']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #141414;
+            color: #f0f0f0;
+            overflow: hidden;
+            user-select: none;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4a4a;
+        }
+        .canvas-grid {
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .roblox-input {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            color: #f0f0f0;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .roblox-input:focus {
+            border-color: #00a2ff;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between">
+
+    <header class="h-12 bg-roblox-darker border-b border-roblox-border flex items-center justify-between px-4 z-20">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded bg-roblox-accent flex items-center justify-center font-bold text-white shadow-lg">
+                <i class="fa-solid fa-cube text-sm"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-sm tracking-wide text-roblox-text">Roblox UI Constructor</h1>
+                <p class="text-[10px] text-roblox-muted">Studio Edition v1.1 (Fixed Typing & Expanded Customization)</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button onclick="app.undo()" title="Undo (Ctrl+Z)" class="px-3 py-1.5 bg-roblox-panel hover:bg-roblox-border border border-roblox-border text-xs rounded font-medium transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-rotate-left"></i><span>Undo</span>
+            </button>
+            <button onclick="app.redo()" title="Redo (Ctrl+Y)" class="px-3 py-1.5 bg-roblox-panel hover:bg-roblox-border border border-roblox-border text-xs rounded font-medium transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-rotate-right"></i><span>Redo</span>
+            </button>
+            <div class="h-4 w-[1px] bg-roblox-border mx-1"></div>
+            <button onclick="app.openCodeModal()" class="px-3.5 py-1.5 bg-roblox-accent hover:bg-roblox-accentHover text-white text-xs font-semibold rounded shadow transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-code"></i><span>Get Luau Code</span>
+            </button>
+            <button onclick="app.exportJSON()" class="px-3 py-1.5 bg-roblox-panel hover:bg-roblox-border border border-roblox-border text-xs rounded font-medium transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-file-export"></i><span>Export JSON</span>
+            </button>
+            <label class="px-3 py-1.5 bg-roblox-panel hover:bg-roblox-border border border-roblox-border text-xs rounded font-medium transition flex items-center space-x-1.5 cursor-pointer">
+                <i class="fa-solid fa-file-import"></i><span>Import JSON</span>
+                <input type="file" id="importFile" accept=".json" class="hidden" onchange="app.importJSON(event)">
+            </label>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- LEFT SIDEBAR: Explorer & Toolbox -->
+        <div class="w-72 bg-roblox-dark border-r border-roblox-border flex flex-col z-10">
+            
+            <!-- Toolbox Section -->
+            <div class="p-3 border-b border-roblox-border">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-roblox-muted mb-2 flex items-center justify-between">
+                    <span>UI Toolbox</span>
+                    <i class="fa-solid fa-toolbox"></i>
+                </h2>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button onclick="app.createElement('Frame')" class="p-2 bg-roblox-panel hover:bg-roblox-border border border-roblox-border rounded text-xs flex items-center space-x-2 transition text-left">
+                        <i class="fa-solid fa-square text-roblox-accent"></i>
+                        <span class="truncate">Frame</span>
+                    </button>
+                    <button onclick="app.createElement('TextButton')" class="p-2 bg-roblox-panel hover:bg-roblox-border border border-roblox-border rounded text-xs flex items-center space-x-2 transition text-left">
+                        <i class="fa-solid fa-rectangle-ad text-amber-400"></i>
+                        <span class="truncate">TextButton</span>
+                    </button>
+                    <button onclick="app.createElement('TextLabel')" class="p-2 bg-roblox-panel hover:bg-roblox-border border border-roblox-border rounded text-xs flex items-center space-x-2 transition text-left">
+                        <i class="fa-solid fa-font text-emerald-400"></i>
+                        <span class="truncate">TextLabel</span>
+                    </button>
+                    <button onclick="app.createElement('TextBox')" class="p-2 bg-roblox-panel hover:bg-roblox-border border border-roblox-border rounded text-xs flex items-center space-x-2 transition text-left">
+                        <i class="fa-solid fa-keyboard text-purple-400"></i>
+                        <span class="truncate">TextBox</span>
+                    </button>
+                    <button onclick="app.createElement('ImageLabel')" class="p-2 bg-roblox-panel hover:bg-roblox-border border border-roblox-border rounded text-xs flex items-center space-x-2 transition text-left">
+                        <i class="fa-solid fa-image text-cyan-400"></i>
+                        <span class="truncate">Image / Emoji</span>
+                    </button>
+                    <button onclick="app.createElement('ScrollingFrame')" class="p-2 bg-roblox-panel hover:bg-roblox-border border border-roblox-border rounded text-xs flex items-center space-x-2 transition text-left">
+                        <i class="fa-solid fa-scroll text-rose-400"></i>
+                        <span class="truncate">Scroll Frame</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Explorer Tree View Section -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <div class="p-3 bg-roblox-panel/40 border-b border-roblox-border flex items-center justify-between">
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-roblox-muted flex items-center space-x-2">
+                        <i class="fa-solid fa-folder-tree"></i>
+                        <span>Explorer (PlayerGui)</span>
+                    </h2>
+                    <div class="flex space-x-1">
+                        <button onclick="app.deleteSelected()" title="Delete Selected" class="p-1 hover:bg-roblox-border rounded text-roblox-muted hover:text-red-400 transition text-xs">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="explorerTree" class="flex-1 overflow-y-auto p-2 space-y-1 font-mono text-xs">
+                    <!-- Dynamic Tree populated via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER: Canvas Preview Area -->
+        <div class="flex-1 flex flex-col bg-[#111111] relative overflow-hidden">
+            <div class="h-10 bg-roblox-dark border-b border-roblox-border flex items-center justify-between px-4 text-xs text-roblox-muted">
+                <div class="flex items-center space-x-4">
+                    <span>Canvas Preview (16:9 Viewport)</span>
+                    <label class="flex items-center space-x-1.5 cursor-pointer">
+                        <input type="checkbox" id="snapToggle" checked class="rounded bg-roblox-panel border-roblox-border text-roblox-accent focus:ring-0">
+                        <span>Snap to Grid</span>
+                    </label>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="app.resetZoom()" class="px-2 py-1 bg-roblox-panel hover:bg-roblox-border rounded border border-roblox-border">Reset View</button>
+                </div>
+            </div>
+
+            <div id="canvasViewport" class="flex-1 canvas-grid flex items-center justify-center relative overflow-auto p-8">
+                <div id="robloxScreen" class="relative shadow-2xl overflow-hidden border border-roblox-border/80 bg-[#1c1c1c]" style="width: 960px; height: 540px;">
+                    <!-- Elements rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR: Properties Inspector -->
+        <div class="w-80 bg-roblox-dark border-l border-roblox-border flex flex-col z-10">
+            <div class="p-3 bg-roblox-panel/40 border-b border-roblox-border flex items-center justify-between">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-roblox-muted flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Properties Inspector</span>
+                </h2>
+                <span id="selectedElementTypeName" class="text-xs font-mono text-roblox-accent font-medium">None Selected</span>
+            </div>
+
+            <div id="propertiesInspector" class="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
+                <div class="text-center text-roblox-muted py-12">
+                    <i class="fa-solid fa-hand-pointer text-2xl mb-2 block opacity-50"></i>
+                    Select an element on the canvas or explorer to edit its properties.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="codeModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-6">
+        <div class="bg-roblox-dark border border-roblox-border rounded-lg w-full max-w-3xl flex flex-col shadow-2xl overflow-hidden max-h-[85vh]">
+            <div class="p-4 bg-roblox-panel border-b border-roblox-border flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-code text-roblox-accent"></i>
+                    <h3 class="font-semibold text-sm">Generated Roblox Studio Luau Code</h3>
+                </div>
+                <button onclick="app.closeCodeModal()" class="text-roblox-muted hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4 flex-1 overflow-y-auto bg-[#161616]">
+                <p class="text-xs text-roblox-muted mb-3">Copy and paste this code directly into a <code class="text-roblox-accent">LocalScript</code> inside <code class="text-roblox-accent">StarterPlayerScripts</code> or <code class="text-roblox-accent">StarterGui</code> in Roblox Studio.</p>
+                <div class="relative">
+                    <button onclick="app.copyCode()" class="absolute top-2 right-2 px-3 py-1 bg-roblox-accent hover:bg-roblox-accentHover text-white rounded text-xs font-medium shadow transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-copy"></i><span>Copy Code</span>
+                    </button>
+                    <pre><code id="luauCodeOutput" class="font-mono text-xs text-emerald-400 p-4 block bg-roblox-darker rounded border border-roblox-border overflow-x-auto leading-relaxed"></code></pre>
+                </div>
+            </div>
+            <div class="p-3 bg-roblox-panel border-t border-roblox-border flex justify-end">
+                <button onclick="app.closeCodeModal()" class="px-4 py-1.5 bg-roblox-border hover:bg-opacity-80 text-white rounded text-xs font-medium transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-6 right-6 bg-roblox-panel border border-roblox-border text-white px-4 py-2.5 rounded-lg shadow-xl text-xs flex items-center space-x-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage">Action successful</span>
+    </div>
+
+    <script>
+        class RobloxUIConstructor {
+            constructor() {
+                this.elements = [];
+                this.selectedId = null;
+                this.history = [];
+                this.redoStack = [];
+
+                this.isDragging = false;
+                this.isResizing = false;
+                this.dragElementId = null;
+                this.resizeHandle = null;
+                this.startX = 0;
+                this.startY = 0;
+                this.startLeft = 0;
+                this.startTop = 0;
+                this.startWidth = 0;
+                this.startHeight = 0;
+
+                this.initDefaultUI();
+                this.bindEvents();
+                this.render();
+            }
+
+            initDefaultUI() {
+                const mainFrame = {
+                    id: 'frame_' + Math.random().toString(36).substring(2, 9),
+                    name: 'MainFrame',
+                    type: 'Frame',
+                    parentId: null,
+                    position: { x: 180, y: 70 },
+                    size: { width: 600, height: 400 },
+                    bgColor: '#242424',
+                    bgTransparency: 0,
+                    borderColor: '#00a2ff',
+                    borderSize: 2,
+                    cornerRadius: 12,
+                    zIndex: 1,
+                    rotation: 0,
+                    dropShadow: true,
+                    shadowColor: '#000000',
+                    text: '',
+                    textColor: '#ffffff',
+                    textSize: 14,
+                    fontStyle: 'SourceSansBold',
+                    image: '',
+                    emoji: '',
+                    strokeColor: '#00a2ff',
+                    strokeThickness: 0
+                };
+
+                const titleLabel = {
+                    id: 'label_' + Math.random().toString(36).substring(2, 9),
+                    name: 'TitleLabel',
+                    type: 'TextLabel',
+                    parentId: mainFrame.id,
+                    position: { x: 20, y: 20 },
+                    size: { width: 560, height: 50 },
+                    bgColor: '#1a1a1a',
+                    bgTransparency: 0.5,
+                    borderColor: '#333333',
+                    borderSize: 1,
+                    cornerRadius: 8,
+                    zIndex: 2,
+                    rotation: 0,
+                    dropShadow: false,
+                    shadowColor: '#000000',
+                    text: '⚡ Roblox Studio UI Constructor',
+                    textColor: '#00a2ff',
+                    textSize: 18,
+                    fontStyle: 'Fredoka',
+                    image: '',
+                    emoji: '',
+                    strokeColor: '#000000',
+                    strokeThickness: 1
+                };
+
+                const closeBtn = {
+                    id: 'btn_' + Math.random().toString(36).substring(2, 9),
+                    name: 'ActionButton',
+                    type: 'TextButton',
+                    parentId: mainFrame.id,
+                    position: { x: 200, y: 320 },
+                    size: { width: 200, height: 50 },
+                    bgColor: '#00a2ff',
+                    bgTransparency: 0,
+                    borderColor: '#ffffff',
+                    borderSize: 0,
+                    cornerRadius: 8,
+                    zIndex: 2,
+                    rotation: 0,
+                    dropShadow: true,
+                    shadowColor: '#000000',
+                    text: 'Click Me!',
+                    textColor: '#ffffff',
+                    textSize: 16,
+                    fontStyle: 'SourceSansBold',
+                    image: '',
+                    emoji: '🚀',
+                    strokeColor: '#ffffff',
+                    strokeThickness: 0
+                };
+
+                this.elements = [mainFrame, titleLabel, closeBtn];
+                this.selectedId = mainFrame.id;
+                this.saveHistory();
+            }
+
+            saveHistory() {
+                this.history.push(JSON.stringify(this.elements));
+                if (this.history.length > 30) this.history.shift();
+                this.redoStack = [];
+            }
+
+            undo() {
+                if (this.history.length > 1) {
+                    this.redoStack.push(this.history.pop());
+                    this.elements = JSON.parse(this.history[this.history.length - 1]);
+                    this.render();
+                    this.showToast('Action undone');
+                }
+            }
+
+            redo() {
+                if (this.redoStack.length > 0) {
+                    const nextState = this.redoStack.pop();
+                    this.history.push(nextState);
+                    this.elements = JSON.parse(nextState);
+                    this.render();
+                    this.showToast('Action redone');
+                }
+            }
+
+            createElement(type) {
+                const id = type.toLowerCase() + '_' + Math.random().toString(36).substring(2, 9);
+                let parentId = null;
+
+                const selected = this.elements.find(el => el.id === this.selectedId);
+                if (selected && (selected.type === 'Frame' || selected.type === 'ScrollingFrame')) {
+                    parentId = selected.id;
+                }
+
+                const newEl = {
+                    id: id,
+                    name: type + ' ' + (this.elements.filter(e => e.type === type).length + 1),
+                    type: type,
+                    parentId: parentId,
+                    position: { x: 50 + Math.random() * 40, y: 50 + Math.random() * 40 },
+                    size: { width: type.includes('Text') || type === 'TextBox' ? 180 : 220, height: type.includes('Text') || type === 'TextBox' ? 45 : 150 },
+                    bgColor: type === 'Frame' ? '#242424' : (type === 'TextButton' ? '#00a2ff' : '#1a1a1a'),
+                    bgTransparency: 0,
+                    borderColor: '#333333',
+                    borderSize: 1,
+                    cornerRadius: 6,
+                    zIndex: this.elements.length + 1,
+                    rotation: 0,
+                    dropShadow: false,
+                    shadowColor: '#000000',
+                    text: type.includes('Text') || type === 'TextBox' ? 'Sample Text' : '',
+                    textColor: '#ffffff',
+                    textSize: 14,
+                    fontStyle: 'SourceSansBold',
+                    image: '',
+                    emoji: type === 'ImageLabel' ? '⭐' : '',
+                    strokeColor: '#000000',
+                    strokeThickness: 0
+                };
+
+                this.elements.push(newEl);
+                this.selectedId = id;
+                this.saveHistory();
+                this.render();
+                this.showToast(`Created ${type}`);
+            }
+
+            deleteElement(id) {
+                const idsToDelete = [id];
+                const findChildren = (pid) => {
+                    this.elements.filter(e => e.parentId === pid).forEach(child => {
+                        idsToDelete.push(child.id);
+                        findChildren(child.id);
+                    });
+                };
+                findChildren(id);
+
+                this.elements = this.elements.filter(e => !idsToDelete.includes(e.id));
+                if (idsToDelete.includes(this.selectedId)) {
+                    this.selectedId = this.elements.length > 0 ? this.elements[0].id : null;
+                }
+                this.saveHistory();
+                this.render();
+                this.showToast('Element deleted');
+            }
+
+            deleteSelected() {
+                if (this.selectedId) {
+                    this.deleteElement(this.selectedId);
+                }
+            }
+
+            selectElement(id, e) {
+                if (e) e.stopPropagation();
+                this.selectedId = id;
+                this.render();
+            }
+
+            // INSTANT LIVE PROPERTY UPDATE WITHOUT RE-RENDERING INSPECTOR (Fixes typing bug!)
+            updatePropertyFast(id, prop, value) {
+                const el = this.elements.find(e => e.id === id);
+                if (el) {
+                    el[prop] = value;
+                    this.renderCanvasOnly();
+                    this.renderExplorerNamesOnly();
+                }
+            }
+
+            updateProperty(id, prop, value) {
+                const el = this.elements.find(e => e.id === id);
+                if (el) {
+                    el[prop] = value;
+                    this.saveHistory();
+                    this.render();
+                }
+            }
+
+            updateNestedPropertyFast(id, parentProp, subProp, value) {
+                const el = this.elements.find(e => e.id === id);
+                if (el) {
+                    el[parentProp][subProp] = Number(value);
+                    this.renderCanvasOnly();
+                }
+            }
+
+            updateNestedProperty(id, parentProp, subProp, value) {
+                const el = this.elements.find(e => e.id === id);
+                if (el) {
+                    el[parentProp][subProp] = Number(value);
+                    this.saveHistory();
+                    this.render();
+                }
+            }
+
+            bindEvents() {
+                window.addEventListener('mousemove', (e) => {
+                    if (!this.isDragging && !this.isResizing) return;
+                    const el = this.elements.find(item => item.id === this.dragElementId);
+                    if (!el) return;
+
+                    const dx = e.clientX - this.startX;
+                    const dy = e.clientY - this.startY;
+
+                    const snap = document.getElementById('snapToggle').checked;
+                    const snapSize = snap ? 10 : 1;
+
+                    if (this.isDragging) {
+                        let newX = this.startLeft + dx;
+                        let newY = this.startTop + dy;
+
+                        if (snap) {
+                            newX = Math.round(newX / snapSize) * snapSize;
+                            newY = Math.round(newY / snapSize) * snapSize;
+                        }
+
+                        el.position.x = Math.max(0, newX);
+                        el.position.y = Math.max(0, newY);
+                        this.renderCanvasOnly();
+                    } else if (this.isResizing) {
+                        let newW = this.startWidth;
+                        let newH = this.startHeight;
+
+                        if (this.resizeHandle.includes('r')) newW += dx;
+                        if (this.resizeHandle.includes('b')) newH += dy;
+                        if (this.resizeHandle.includes('l')) {
+                            newW -= dx;
+                            el.position.x = this.startLeft + dx;
+                        }
+                        if (this.resizeHandle.includes('t')) {
+                            newH -= dy;
+                            el.position.y = this.startTop + dy;
+                        }
+
+                        el.size.width = Math.max(30, newW);
+                        el.size.height = Math.max(30, newH);
+                        this.renderCanvasOnly();
+                    }
+                });
+
+                window.addEventListener('mouseup', () => {
+                    if (this.isDragging || this.isResizing) {
+                        this.isDragging = false;
+                        this.isResizing = false;
+                        this.dragElementId = null;
+                        this.resizeHandle = null;
+                        this.saveHistory();
+                        this.renderInspector();
+                    }
+                });
+            }
+
+            startDrag(id, e) {
+                e.stopPropagation();
+                this.selectedId = id;
+                this.isDragging = true;
+                this.dragElementId = id;
+                this.startX = e.clientX;
+                this.startY = e.clientY;
+                const el = this.elements.find(item => item.id === id);
+                this.startLeft = el.position.x;
+                this.startTop = el.position.y;
+                this.render();
+            }
+
+            startResize(id, handle, e) {
+                e.stopPropagation();
+                this.selectedId = id;
+                this.isResizing = true;
+                this.dragElementId = id;
+                this.resizeHandle = handle;
+                this.startX = e.clientX;
+                this.startY = e.clientY;
+                const el = this.elements.find(item => item.id === id);
+                this.startLeft = el.position.x;
+                this.startTop = el.position.y;
+                this.startWidth = el.size.width;
+                this.startHeight = el.size.height;
+                this.render();
+            }
+
+            render() {
+                this.renderExplorer();
+                this.renderCanvas();
+                this.renderInspector();
+            }
+
+            renderCanvasOnly() {
+                this.renderCanvas();
+            }
+
+            renderExplorerNamesOnly() {
+                this.renderExplorer();
+            }
+
+            renderExplorer() {
+                const container = document.getElementById('explorerTree');
+                container.innerHTML = '';
+
+                const renderNode = (item, depth = 0) => {
+                    const div = document.createElement('div');
+                    const isSelected = item.id === this.selectedId;
+                    
+                    div.className = `flex items-center justify-between px-2 py-1.5 rounded cursor-pointer transition text-xs ${isSelected ? 'bg-roblox-selected text-white' : 'hover:bg-roblox-panel text-roblox-text'}`;
+                    div.style.paddingLeft = `${depth * 14 + 8}px`;
+                    div.onclick = (e) => this.selectElement(item.id, e);
+
+                    let icon = 'fa-square text-roblox-accent';
+                    if (item.type === 'TextButton') icon = 'fa-rectangle-ad text-amber-400';
+                    if (item.type === 'TextLabel') icon = 'fa-font text-emerald-400';
+                    if (item.type === 'TextBox') icon = 'fa-keyboard text-purple-400';
+                    if (item.type === 'ImageLabel') icon = 'fa-image text-cyan-400';
+                    if (item.type === 'ScrollingFrame') icon = 'fa-scroll text-rose-400';
+
+                    div.innerHTML = `
+                        <div class="flex items-center space-x-2 truncate">
+                            <i class="fa-solid ${icon}"></i>
+                            <span class="truncate">${item.name}</span>
+                        </div>
+                        <div class="flex items-center space-x-1 opacity-70 hover:opacity-100">
+                            <button onclick="event.stopPropagation(); app.deleteElement('${item.id}')" class="hover:text-red-400 p-0.5"><i class="fa-solid fa-trash text-[10px]"></i></button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+
+                    const children = this.elements.filter(e => e.parentId === item.id);
+                    children.forEach(child => renderNode(child, depth + 1));
+                };
+
+                const rootItems = this.elements.filter(e => !e.parentId);
+                if (rootItems.length === 0) {
+                    container.innerHTML = `<div class="text-center text-roblox-muted py-6 text-[11px]">No elements in Explorer.</div>`;
+                } else {
+                    rootItems.forEach(item => renderNode(item, 0));
+                }
+            }
+
+            renderCanvas() {
+                const screen = document.getElementById('robloxScreen');
+                screen.innerHTML = '';
+
+                const sorted = [...this.elements].sort((a, b) => a.zIndex - b.zIndex);
+
+                sorted.forEach(el => {
+                    const dom = document.createElement('div');
+                    dom.id = 'canvas_el_' + el.id;
+                    dom.className = `absolute flex items-center justify-center transition-shadow ${el.id === this.selectedId ? 'ring-2 ring-roblox-accent shadow-lg' : 'hover:ring-1 hover:ring-roblox-border'}`;
+                    dom.style.left = `${el.position.x}px`;
+                    dom.style.top = `${el.position.y}px`;
+                    dom.style.width = `${el.size.width}px`;
+                    dom.style.height = `${el.size.height}px`;
+                    dom.style.backgroundColor = el.bgColor;
+                    dom.style.opacity = 1 - el.bgTransparency;
+                    dom.style.border = `${el.borderSize}px solid ${el.borderColor}`;
+                    dom.style.borderRadius = `${el.cornerRadius}px`;
+                    dom.style.zIndex = el.zIndex;
+                    dom.style.transform = `rotate(${el.rotation || 0}deg)`;
+                    
+                    if (el.dropShadow) {
+                        dom.style.boxShadow = `0 10px 25px -3px ${el.shadowColor || 'rgba(0,0,0,0.5)'}`;
+                    }
+
+                    dom.style.overflow = el.type === 'ScrollingFrame' ? 'auto' : 'hidden';
+
+                    dom.onmousedown = (e) => this.startDrag(el.id, e);
+
+                    let fontFamily = 'Inter, sans-serif';
+                    if (el.fontStyle === 'Fredoka') fontFamily = "'Fredoka', sans-serif";
+                    if (el.fontStyle === 'PermanentMarker') fontFamily = "'Permanent Marker', cursive";
+                    if (el.fontStyle === 'Code' || el.fontStyle === 'SourceSansCode') fontFamily = "'JetBrains Mono', monospace";
+
+                    let content = '';
+                    if (el.type === 'TextButton' || el.type === 'TextLabel') {
+                        let textStyle = `color: ${el.textColor}; font-size: ${el.textSize}px; font-family: ${fontFamily};`;
+                        if (el.strokeThickness && el.strokeThickness > 0) {
+                            textStyle += ` text-shadow: -${el.strokeThickness}px -${el.strokeThickness}px 0 ${el.strokeColor}, 0 -${el.strokeThickness}px 0 ${el.strokeColor}, ${el.strokeThickness}px -${el.strokeThickness}px 0 ${el.strokeColor}, ${el.strokeThickness}px 0 0 ${el.strokeColor}, ${el.strokeThickness}px ${el.strokeThickness}px 0 ${el.strokeColor}, 0 ${el.strokeThickness}px 0 ${el.strokeColor}, -${el.strokeThickness}px ${el.strokeThickness}px 0 ${el.strokeColor}, -${el.strokeThickness}px 0 0 ${el.strokeColor};`;
+                        }
+                        content = `<span class="px-2 truncate w-full text-center" style="${textStyle}">${this.escapeHtml(el.text)}</span>`;
+                    } else if (el.type === 'TextBox') {
+                        content = `<input type="text" readonly value="${this.escapeHtml(el.text)}" class="w-full h-full bg-transparent text-center outline-none px-2" style="color: ${el.textColor}; font-size: ${el.textSize}px; font-family: ${fontFamily};" placeholder="TextBox">`;
+                    } else if (el.type === 'ImageLabel') {
+                        if (el.image) {
+                            content = `<img src="${el.image}" class="w-full h-full object-cover rounded" onerror="this.src='https://placehold.co/100x100/242424/ffffff?text=Image'">`;
+                        } else if (el.emoji) {
+                            content = `<span style="font-size: ${Math.min(el.size.width, el.size.height) * 0.5}px;">${el.emoji}</span>`;
+                        } else {
+                            content = `<span class="text-roblox-muted text-xs"><i class="fa-solid fa-image"></i> Image / Emoji</span>`;
+                        }
+                    } else if (el.type === 'ScrollingFrame') {
+                        content = `<div class="absolute top-2 left-2 text-[10px] text-roblox-muted font-mono pointer-events-none">[ScrollingFrame]</div>`;
+                    }
+
+                    dom.innerHTML = content;
+
+                    if (el.id === this.selectedId) {
+                        const handles = ['tl', 'tr', 'bl', 'br'];
+                        handles.forEach(h => {
+                            const handleDiv = document.createElement('div');
+                            let posClass = '';
+                            if (h === 'tl') posClass = '-top-1.5 -left-1.5 cursor-nwse-resize';
+                            if (h === 'tr') posClass = '-top-1.5 -right-1.5 cursor-nesw-resize';
+                            if (h === 'bl') posClass = '-bottom-1.5 -left-1.5 cursor-nesw-resize';
+                            if (h === 'br') posClass = '-bottom-1.5 -right-1.5 cursor-nwse-resize';
+
+                            handleDiv.className = `absolute w-3 h-3 bg-roblox-accent border border-white rounded-full ${posClass} z-50`;
+                            handleDiv.onmousedown = (e) => this.startResize(el.id, h, e);
+                            dom.appendChild(handleDiv);
+                        });
+                    }
+
+                    screen.appendChild(dom);
+                });
+            }
+
+            renderInspector() {
+                const inspector = document.getElementById('propertiesInspector');
+                const typeNameEl = document.getElementById('selectedElementTypeName');
+                
+                const el = this.elements.find(item => item.id === this.selectedId);
+                if (!el) {
+                    typeNameEl.innerText = 'None Selected';
+                    inspector.innerHTML = `
+                        <div class="text-center text-roblox-muted py-12">
+                            <i class="fa-solid fa-hand-pointer text-2xl mb-2 block opacity-50"></i>
+                            Select an element on the canvas or explorer to edit its properties.
+                        </div>
+                    `;
+                    return;
+                }
+
+                typeNameEl.innerText = `${el.type} (${el.name})`;
+
+                inspector.innerHTML = `
+                    <div class="space-y-3">
+                        <h3 class="font-semibold text-roblox-muted text-[11px] uppercase tracking-wider border-b border-roblox-border pb-1">Identity</h3>
+                        <div>
+                            <label class="block text-[11px] text-roblox-muted mb-1">Name</label>
+                            <input type="text" value="${el.name}" oninput="app.updatePropertyFast('${el.id}', 'name', this.value)" onchange="app.saveHistory()" class="w-full roblox-input">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-roblox-muted mb-1">Parent</label>
+                            <select onchange="app.updateProperty('${el.id}', 'parentId', this.value === 'null' ? null : this.value)" class="w-full roblox-input">
+                                <option value="null">PlayerGui (ScreenGui)</option>
+                                ${this.elements.filter(item => item.id !== el.id && (item.type === 'Frame' || item.type === 'ScrollingFrame')).map(item => `
+                                    <option value="${item.id}" ${el.parentId === item.id ? 'selected' : ''}>${item.name} (${item.type})</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <h3 class="font-semibold text-roblox-muted text-[11px] uppercase tracking-wider border-b border-roblox-border pb-1">Position & Size</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Position X</label>
+                                <input type="number" value="${el.position.x}" oninput="app.updateNestedPropertyFast('${el.id}', 'position', 'x', this.value)" onchange="app.saveHistory()" class="w-full roblox-input">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Position Y</label>
+                                <input type="number" value="${el.position.y}" oninput="app.updateNestedPropertyFast('${el.id}', 'position', 'y', this.value)" onchange="app.saveHistory()" class="w-full roblox-input">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Width</label>
+                                <input type="number" value="${el.size.width}" oninput="app.updateNestedPropertyFast('${el.id}', 'size', 'width', this.value)" onchange="app.saveHistory()" class="w-full roblox-input">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Height</label>
+                                <input type="number" value="${el.size.height}" oninput="app.updateNestedPropertyFast('${el.id}', 'size', 'height', this.value)" onchange="app.saveHistory()" class="w-full roblox-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <h3 class="font-semibold text-roblox-muted text-[11px] uppercase tracking-wider border-b border-roblox-border pb-1">Appearance & Effects</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Background Color</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="color" value="${el.bgColor}" onchange="app.updateProperty('${el.id}', 'bgColor', this.value)" class="w-8 h-7 bg-transparent rounded cursor-pointer border border-roblox-border">
+                                    <input type="text" value="${el.bgColor}" oninput="app.updatePropertyFast('${el.id}', 'bgColor', this.value)" onchange="app.saveHistory()" class="w-full roblox-input font-mono text-[11px]">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Transparency (${el.bgTransparency})</label>
+                                <input type="range" min="0" max="1" step="0.05" value="${el.bgTransparency}" oninput="app.updatePropertyFast('${el.id}', 'bgTransparency', parseFloat(this.value))" onchange="app.saveHistory()" class="w-full accent-roblox-accent mt-2">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Corner Radius</label>
+                                <input type="number" value="${el.cornerRadius}" oninput="app.updatePropertyFast('${el.id}', 'cornerRadius', Number(this.value))" onchange="app.saveHistory()" class="w-full roblox-input">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Rotation (°)</label>
+                                <input type="number" value="${el.rotation || 0}" oninput="app.updatePropertyFast('${el.id}', 'rotation', Number(this.value))" onchange="app.saveHistory()" class="w-full roblox-input">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">ZIndex</label>
+                                <input type="number" value="${el.zIndex}" oninput="app.updatePropertyFast('${el.id}', 'zIndex', Number(this.value))" onchange="app.saveHistory()" class="w-full roblox-input">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Border Color</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="color" value="${el.borderColor}" onchange="app.updateProperty('${el.id}', 'borderColor', this.value)" class="w-8 h-7 bg-transparent rounded cursor-pointer border border-roblox-border">
+                                    <input type="number" value="${el.borderSize}" oninput="app.updatePropertyFast('${el.id}', 'borderSize', Number(this.value))" onchange="app.saveHistory()" class="w-16 roblox-input">
+                                </div>
+                            </div>
+                            <div class="flex flex-col justify-end">
+                                <label class="flex items-center space-x-2 cursor-pointer mt-3">
+                                    <input type="checkbox" ${el.dropShadow ? 'checked' : ''} onchange="app.updateProperty('${el.id}', 'dropShadow', this.checked)" class="rounded bg-roblox-panel border-roblox-border text-roblox-accent">
+                                    <span class="text-[11px]">Drop Shadow (UIEffect)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${el.type.includes('Text') || el.type === 'TextBox' ? `
+                    <div class="space-y-3 pt-2">
+                        <h3 class="font-semibold text-roblox-muted text-[11px] uppercase tracking-wider border-b border-roblox-border pb-1">Text Properties</h3>
+                        <div>
+                            <label class="block text-[10px] text-roblox-muted mb-1">Text Content</label>
+                            <input type="text" value="${el.text}" oninput="app.updatePropertyFast('${el.id}', 'text', this.value)" onchange="app.saveHistory()" class="w-full roblox-input">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">TextColor3</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="color" value="${el.textColor}" onchange="app.updateProperty('${el.id}', 'textColor', this.value)" class="w-8 h-7 bg-transparent rounded cursor-pointer border border-roblox-border">
+                                    <input type="text" value="${el.textColor}" oninput="app.updatePropertyFast('${el.id}', 'textColor', this.value)" onchange="app.saveHistory()" class="w-full roblox-input font-mono text-[11px]">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">TextSize</label>
+                                <input type="number" value="${el.textSize}" oninput="app.updatePropertyFast('${el.id}', 'textSize', Number(this.value))" onchange="app.saveHistory()" class="w-full roblox-input">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">Font Family</label>
+                                <select onchange="app.updateProperty('${el.id}', 'fontStyle', this.value)" class="w-full roblox-input">
+                                    <option value="SourceSansBold" ${el.fontStyle === 'SourceSansBold' ? 'selected' : ''}>SourceSansBold</option>
+                                    <option value="Fredoka" ${el.fontStyle === 'Fredoka' ? 'selected' : ''}>Fredoka One</option>
+                                    <option value="PermanentMarker" ${el.fontStyle === 'PermanentMarker' ? 'selected' : ''}>Permanent Marker</option>
+                                    <option value="Code" ${el.fontStyle === 'Code' ? 'selected' : ''}>Code / Monospace</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-roblox-muted mb-1">UIStroke Thickness</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="color" value="${el.strokeColor || '#000000'}" onchange="app.updateProperty('${el.id}', 'strokeColor', this.value)" class="w-8 h-7 bg-transparent rounded cursor-pointer border border-roblox-border">
+                                    <input type="number" min="0" max="10" value="${el.strokeThickness || 0}" oninput="app.updatePropertyFast('${el.id}', 'strokeThickness', Number(this.value))" onchange="app.saveHistory()" class="w-16 roblox-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${el.type === 'ImageLabel' ? `
+                    <div class="space-y-3 pt-2">
+                        <h3 class="font-semibold text-roblox-muted text-[11px] uppercase tracking-wider border-b border-roblox-border pb-1">Image & Emoji Asset</h3>
+                        <div>
+                            <label class="block text-[10px] text-roblox-muted mb-1">Quick Emoji Picker</label>
+                            <div class="grid grid-cols-6 gap-1 mb-2">
+                                ${['⭐', '🔥', '💎', '🚀', '❤️', '🛡️', '⚔️', '🏆', '🎁', '⚡', '👑', '🎯'].map(emoji => `
+                                    <button onclick="app.updateProperty('${el.id}', 'emoji', '${emoji}'); app.updateProperty('${el.id}', 'image', '')" class="p-1.5 bg-roblox-panel hover:bg-roblox-border rounded text-center text-sm">${emoji}</button>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-roblox-muted mb-1">Upload Custom Image</label>
+                            <input type="file" accept="image/*" onchange="app.handleImageUpload('${el.id}', event)" class="w-full text-xs text-roblox-muted file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-roblox-panel file:text-roblox-text hover:file:bg-roblox-border cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-roblox-muted mb-1">Roblox Asset ID</label>
+                            <input type="text" value="${el.image}" oninput="app.updatePropertyFast('${el.id}', 'image', this.value)" onchange="app.saveHistory()" placeholder="rbxassetid://..." class="w-full roblox-input">
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+            }
+
+            handleImageUpload(id, event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.updateProperty(id, 'image', e.target.result);
+                        this.updateProperty(id, 'emoji', '');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            hexToColor3(hex) {
+                let c = hex.replace('#', '');
+                if (c.length === 3) c = c.split('').map(char => char + char).join('');
+                const r = parseInt(c.substring(0, 2), 16) / 255;
+                const g = parseInt(c.substring(2, 4), 16) / 255;
+                const b = parseInt(c.substring(4, 6), 16) / 255;
+                return `Color3.fromRGB(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+            }
+
+            generateLuauCode() {
+                let code = `-- Generated by Roblox UI Constructor\n`;
+                code += `-- Place this LocalScript inside StarterPlayer.StarterPlayerScripts or StarterGui\n\n`;
+                code += `local Players = game:GetService("Players")\n`;
+                code += `local localPlayer = Players.LocalPlayer\n`;
+                code += `local playerGui = localPlayer:WaitForChild("PlayerGui")\n\n`;
+
+                code += `local screenGui = Instance.new("ScreenGui")\n`;
+                code += `screenGui.Name = "GeneratedUI"\n`;
+                code += `screenGui.ResetOnSpawn = false\n`;
+                code += `screenGui.Parent = playerGui\n\n`;
+
+                const varNames = {};
+                this.elements.forEach(el => {
+                    const cleanName = el.name.replace(/[^a-zA-Z0-9]/g, '');
+                    varNames[el.id] = cleanName.charAt(0).toLowerCase() + cleanName.slice(1) + '_' + el.id.substring(el.id.indexOf('_') + 1);
+                });
+
+                this.elements.forEach(el => {
+                    const varName = varNames[el.id];
+                    code += `local ${varName} = Instance.new("${el.type}")\n`;
+                    code += `${varName}.Name = "${el.name}"\n`;
+                    code += `${varName}.Size = UDim2.new(0, ${el.size.width}, 0, ${el.size.height})\n`;
+                    code += `${varName}.Position = UDim2.new(0, ${el.position.x}, 0, ${el.position.y})\n`;
+                    code += `${varName}.BackgroundColor3 = ${this.hexToColor3(el.bgColor)}\n`;
+                    code += `${varName}.BackgroundTransparency = ${el.bgTransparency}\n`;
+                    code += `${varName}.BorderSizePixel = ${el.borderSize}\n`;
+                    code += `${varName}.BorderColor3 = ${this.hexToColor3(el.borderColor)}\n`;
+                    code += `${varName}.ZIndex = ${el.zIndex}\n`;
+                    code += `${varName}.Rotation = ${el.rotation || 0}\n`;
+
+                    if (el.cornerRadius > 0) {
+                        code += `local ${varName}Corner = Instance.new("UICorner")\n`;
+                        code += `${varName}Corner.CornerRadius = UDim.new(0, ${el.cornerRadius})\n`;
+                        code += `${varName}Corner.Parent = ${varName}\n`;
+                    }
+
+                    if (el.strokeThickness && el.strokeThickness > 0) {
+                        code += `local ${varName}Stroke = Instance.new("UIStroke")\n`;
+                        code += `${varName}Stroke.Thickness = ${el.strokeThickness}\n`;
+                        code += `${varName}Stroke.Color = ${this.hexToColor3(el.strokeColor || '#000000')}\n`;
+                        code += `${varName}Stroke.Parent = ${varName}\n`;
+                    }
+
+                    if (el.type.includes('Text') || el.type === 'TextBox') {
+                        code += `${varName}.Text = "${el.text.replace(/"/g, '\\"')}"\n`;
+                        code += `${varName}.TextColor3 = ${this.hexToColor3(el.textColor)}\n`;
+                        code += `${varName}.TextSize = ${el.textSize}\n`;
+                        code += `${varName}.FontFace = Font.fromName("${el.fontStyle === 'Fredoka' ? 'FredokaOne' : 'SourceSansBold'}")\n`;
+                    }
+
+                    if (el.type === 'ImageLabel') {
+                        if (el.image && el.image.startsWith('rbxassetid://')) {
+                            code += `${varName}.Image = "${el.image}"\n`;
+                        } else if (el.emoji) {
+                            code += `local ${varName}Emoji = Instance.new("TextLabel")\n`;
+                            code += `${varName}Emoji.Size = UDim2.new(1, 0, 1, 0)\n`;
+                            code += `${varName}Emoji.BackgroundTransparency = 1\n`;
+                            code += `${varName}Emoji.Text = "${el.emoji}"\n`;
+                            code += `${varName}Emoji.TextSize = ${Math.min(el.size.width, el.size.height) * 0.5}\n`;
+                            code += `${varName}Emoji.Parent = ${varName}\n`;
+                        }
+                    }
+
+                    if (el.parentId && varNames[el.parentId]) {
+                        code += `${varName}.Parent = ${varNames[el.parentId]}\n\n`;
+                    } else {
+                        code += `${varName}.Parent = screenGui\n\n`;
+                    }
+                });
+
+                return code;
+            }
+
+            openCodeModal() {
+                const modal = document.getElementById('codeModal');
+                const output = document.getElementById('luauCodeOutput');
+                output.innerText = this.generateLuauCode();
+                modal.classList.remove('hidden');
+            }
+
+            closeCodeModal() {
+                document.getElementById('codeModal').classList.add('hidden');
+            }
+
+            copyCode() {
+                const code = document.getElementById('luauCodeOutput').innerText;
+                const textarea = document.createElement('textarea');
+                textarea.value = code;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    this.showToast('Luau code copied to clipboard!');
+                } catch (err) {
+                    this.showToast('Failed to copy code');
+                }
+                document.body.removeChild(textarea);
+            }
+
+            exportJSON() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.elements, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", "roblox_ui_layout.json");
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+                this.showToast('Project exported as JSON');
+            }
+
+            importJSON(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (Array.isArray(parsed)) {
+                            this.elements = parsed;
+                            this.selectedId = this.elements.length > 0 ? this.elements[0].id : null;
+                            this.saveHistory();
+                            this.render();
+                            this.showToast('Project imported successfully!');
+                        } else {
+                            this.showToast('Invalid JSON file format');
+                        }
+                    } catch (err) {
+                        this.showToast('Error parsing JSON file');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            resetZoom() {
+                const viewport = document.getElementById('canvasViewport');
+                viewport.scrollTop = (viewport.scrollHeight - viewport.clientHeight) / 2;
+                viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
+                this.showToast('Canvas centered');
+            }
+
+            escapeHtml(str) {
+                return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            }
+
+            showToast(message) {
+                const toast = document.getElementById('toast');
+                const msg = document.getElementById('toastMessage');
+                msg.innerText = message;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 2500);
+            }
+        }
+
+        let app = null;
+        window.addEventListener('DOMContentLoaded', () => {
+            app = new RobloxUIConstructor();
+        });
+    </script>
+</body>
+</html>
